@@ -3,6 +3,8 @@ import secrets
 import os
 import base64
 import getpass
+import random
+import numpy
 
 import cryptography
 from cryptography.fernet import Fernet
@@ -12,7 +14,8 @@ from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 # asymmetric key generation
 
 def key_gen(password):
-    new_salt = secrets.token_bytes(16)
+    numpy.random.seed(ord(password[0]))
+    new_salt = numpy.random.bytes(16)
     kdf = Scrypt(salt=new_salt, length=32, n=2**14, r=8, p=1)
     new_key = kdf.derive(password.encode())
 
@@ -24,10 +27,10 @@ def key_gen(password):
 
 def encrypt_file(filename, key):
     fer = Fernet(key)
-    with open(filename, "wb") as file:
+    with open(filename, "rb") as file:
         data = file.read()
     
-    encrypted_data = f.encrypt(file_data)
+    encrypted_data = fer.encrypt(data)
     # change filename (later)
     with open(filename, "wb") as file:
         file.write(encrypted_data)
@@ -49,17 +52,17 @@ def encrypt_dir(path, key):
     for child in pathlib.Path(path).glob("*"):
         if child.is_file():
             print(f"[*] Encrypting {child}")
-            encrypt(child, key)
+            encrypt_file(child, key)
         elif child.is_dir():
-            encrypt_folder(child, key)
+            encrypt_dir(child, key)
 
 def decrypt_dir(path, key):
     for child in pathlib.Path(path).glob("*"):
         if child.is_file():
             print(f"[*] Decrypting {child}")
-            decrypt(child, key)
+            decrypt_file(child, key)
         elif child.is_dir():
-            decrypt_folder(child, key)
+            decrypt_dir(child, key)
 
 
 def main():
