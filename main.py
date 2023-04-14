@@ -22,7 +22,7 @@ def key_gen(password):
     return base64.urlsafe_b64encode(new_key)
 
 
-def crypt_file(filename, key):
+def encrypt_file(filename, key):
     fer = Fernet(key)
     with open(filename, "wb") as file:
         data = file.read()
@@ -31,3 +31,59 @@ def crypt_file(filename, key):
     # change filename (later)
     with open(filename, "wb") as file:
         file.write(encrypted_data)
+
+def decrypt_file(filename, key):
+    f = Fernet(key)
+    with open(filename, "rb") as file:
+        encrypted_data = file.read()
+    try:
+        decrypted_data = f.decrypt(encrypted_data)
+    except cryptography.fernet.InvalidToken:
+        print("Incorrect password. Erasing file contents.")
+        os.remove(filename)
+        return
+    with open(filename, "wb") as file:
+        file.write(decrypted_data)
+
+def encrypt_dir(path, key):
+    for child in pathlib.Path(path).glob("*"):
+        if child.is_file():
+            print(f"[*] Encrypting {child}")
+            encrypt(child, key)
+        elif child.is_dir():
+            encrypt_folder(child, key)
+
+def decrypt_dir(path, key):
+    for child in pathlib.Path(path).glob("*"):
+        if child.is_file():
+            print(f"[*] Decrypting {child}")
+            decrypt(child, key)
+        elif child.is_dir():
+            decrypt_folder(child, key)
+
+
+def main():
+    mode = input("Enter mode requested (E/D): ")
+    if (mode == "E"):
+        password = input("Enter password used for encryption: ")
+        t_key = key_gen(password)
+        cwd = os.getcwd()
+        print("Encrypting directory: {0}".format(cwd))
+        c = input("Continue? (Y/N) : ")
+        if (c != "Y"):
+            os.exit()
+        encrypt_dir(cwd, t_key)
+    else:
+        password = input("Enter password used for decryption: ")
+        t_key = key_gen(password)
+        cwd = os.getcwd()
+        print("Decrypting directory: {0}".format(cwd))
+        c = input("Continue? (Y/N) : ")
+        if (c != "Y"):
+            os.exit()
+        decrypt_dir(cwd, t_key)
+
+
+
+if __name__ == '__main__':
+    main()
